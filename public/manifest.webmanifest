@@ -1,0 +1,16 @@
+{
+  "name": "Jatuh Tempo Keluarga",
+  "short_name": "Jatuh Tempo",
+  "description": "Tagihan dan dokumen berkala keluarga, terlihat berdua.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#1f5fd6",
+  "icons": [
+    { "src": "/ikon/ikon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/ikon/ikon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/ikon/ikon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

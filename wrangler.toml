@@ -1,0 +1,21 @@
+name = "jatuh-tempo"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jatuh-tempo"
+database_id = "GANTI-DENGAN-ID-D1"
+migrations_dir = "migrations"
+
+[vars]
+# OAuth Client ID (tipe "Web application") dari Google Cloud Console. Bukan rahasia.
+GOOGLE_CLIENT_ID = ""
+
+# Rahasia diatur lewat `wrangler secret put` (lokal: file .dev.vars):
+#   SESSION_SECRET  string acak panjang untuk menandatangani cookie login
+#   ALLOWED_EMAILS  "D:email-diego@gmail.com,I:email-irna@gmail.com"
