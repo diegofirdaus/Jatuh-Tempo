@@ -9,7 +9,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "jatuh-tempo"
-database_id = "GANTI-DENGAN-ID-D1"
+database_id = "1adefadd-904d-474b-b290-094124910dd5"
 migrations_dir = "migrations"
 
 [vars]
