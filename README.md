@@ -13,6 +13,7 @@ Latar belakang & ruang lingkup: [docs/one-pager.md](docs/one-pager.md).
 - **Warna & inisial per orang** (D biru, I merah muda, B ungu) plus penyaring cepat.
 - **Tanggal berubah-ubah** (kartu kredit): setelah selesai, aplikasi menanyakan tanggal berikutnya.
 - **Tandai selesai + catatan bukti**; tanggal berikutnya dihitung dari jatuh tempo lama, riwayat tersimpan.
+- **Mode demo untuk penguji**: tombol "Coba demo sebagai Diego/Irna" di layar login, tanpa akun. Data contoh disimpan di ruang terpisah (`ruang = 'demo'`) sehingga data keluarga asli tidak terlihat; tombol "Kembalikan data contoh" mengisi ulang. Matikan dengan `DEMO = "0"`.
 - **Bahasa Indonesia sederhana**. Semua teks ada di `public/js/teks.js` (English menyusul di v2).
 
 ## Susunan
@@ -24,6 +25,7 @@ Latar belakang & ruang lingkup: [docs/one-pager.md](docs/one-pager.md).
 | `src/kalender.js` | Pembuat feed `.ics` |
 | `public/` | Aplikasi (PWA) tanpa build step |
 | `public/js/jadwal.js` | Logika tanggal & tahap pengingat (dipakai server dan browser) |
+| `src/demo.js` | Data contoh untuk mode demo |
 | `migrations/` | Skema database D1 |
 | `test/` | Tes logika tanggal & kalender (`npm test`) |
 

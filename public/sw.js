@@ -1,5 +1,5 @@
 // Service worker sederhana: aplikasi tetap terbuka saat sinyal jelek. Data (/api) selalu diambil langsung.
-const CACHE = 'jatuh-tempo-v2';
+const CACHE = 'jatuh-tempo-v3';
 const SHELL = ['/', '/app.css', '/js/app.js', '/js/jadwal.js', '/js/teks.js', '/ikon/ikon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {

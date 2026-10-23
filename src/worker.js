@@ -1,7 +1,9 @@
 // Jatuh Tempo Keluarga: API + feed kalender. File statis (aplikasi) dilayani dari folder public/.
+// Data terbagi per "ruang": 'keluarga' (data asli, login Google) dan 'demo' (data contoh untuk penguji).
 
 import { bacaSesi, buatCookieSesi, daftarEmail, hapusCookieSesi, tokenAcak, verifikasiTokenGoogle } from './auth.js';
 import { buatKalender } from './kalender.js';
+import { BATAS_URUSAN_DEMO, RUANG_DEMO, isiUlangDemo, pastikanDemoTerisi } from './demo.js';
 import { hariIniWIB, jatuhTempoBerikutnya, tanggalValid } from '../public/js/jadwal.js';
 
 function json(data, status = 200, headers = {}) {
@@ -26,6 +28,10 @@ async function bacaJson(request) {
 
 function sekarang() {
   return new Date().toISOString();
+}
+
+function demoAktif(env) {
+  return env.DEMO !== '0';
 }
 
 // Memeriksa & merapikan isian urusan dari formulir. Mengembalikan { data } atau { galat }.
@@ -53,42 +59,42 @@ function rapikanUrusan(input) {
   };
 }
 
-async function daftarUrusan(env) {
+async function daftarUrusan(env, ruang) {
   const { results: urusan } = await env.DB.prepare(
-    'SELECT * FROM urusan WHERE diarsip = 0 ORDER BY jatuh_tempo, judul',
-  ).all();
+    'SELECT * FROM urusan WHERE ruang = ? AND diarsip = 0 ORDER BY jatuh_tempo, judul',
+  ).bind(ruang).all();
   const { results: terakhir } = await env.DB.prepare(
     `SELECT s.* FROM selesai s
+     JOIN urusan u ON u.id = s.urusan_id AND u.ruang = ?
      JOIN (SELECT urusan_id, MAX(selesai_pada) m FROM selesai GROUP BY urusan_id) t
        ON t.urusan_id = s.urusan_id AND t.m = s.selesai_pada`,
-  ).all();
+  ).bind(ruang).all();
   const peta = Object.fromEntries(terakhir.map((s) => [s.urusan_id, s]));
   return urusan.map((u) => ({ ...u, terakhir_selesai: peta[u.id] || null }));
 }
 
-async function tokenKalender(env, orang) {
-  const ada = await env.DB.prepare('SELECT token FROM kalender WHERE orang = ?').bind(orang).first();
+async function tokenKalender(env, ruang, orang) {
+  const cari = () => env.DB.prepare('SELECT token FROM kalender WHERE ruang = ? AND orang = ?').bind(ruang, orang).first();
+  const ada = await cari();
   if (ada) return ada.token;
-  const token = tokenAcak();
-  await env.DB.prepare('INSERT OR IGNORE INTO kalender (orang, token) VALUES (?, ?)').bind(orang, token).run();
-  return (await env.DB.prepare('SELECT token FROM kalender WHERE orang = ?').bind(orang).first()).token;
+  await env.DB.prepare('INSERT OR IGNORE INTO kalender (ruang, orang, token) VALUES (?, ?, ?)').bind(ruang, orang, tokenAcak()).run();
+  return (await cari()).token;
 }
 
-async function linkKalender(env, url) {
+async function linkKalender(env, ruang, url) {
   const hasil = {};
   for (const orang of ['D', 'I']) {
-    const token = await tokenKalender(env, orang);
-    hasil[orang] = `webcal://${url.host}/kal/${token}.ics`;
+    hasil[orang] = `webcal://${url.host}/kal/${await tokenKalender(env, ruang, orang)}.ics`;
   }
   return hasil;
 }
 
-async function api(request, env, url, orang) {
+async function api(request, env, url, { orang, ruang }) {
   const { pathname } = url;
   const metode = request.method;
 
   if (pathname === '/api/urusan' && metode === 'GET') {
-    return json({ urusan: await daftarUrusan(env), hari_ini: hariIniWIB() });
+    return json({ urusan: await daftarUrusan(env, ruang), hari_ini: hariIniWIB() });
   }
 
   if (pathname === '/api/urusan' && metode === 'POST') {
@@ -96,13 +102,17 @@ async function api(request, env, url, orang) {
     if (!body) return galat('Data tidak terbaca.');
     const { data, galat: pesan } = rapikanUrusan(body);
     if (pesan) return galat(pesan);
+    if (ruang === RUANG_DEMO) {
+      const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM urusan WHERE ruang = ? AND diarsip = 0').bind(ruang).first();
+      if (n >= BATAS_URUSAN_DEMO) return galat('Ruang demo sudah penuh. Ketuk "Kembalikan data contoh" untuk mengosongkan.');
+    }
     const id = crypto.randomUUID();
     const kini = sekarang();
     await env.DB.prepare(
-      `INSERT INTO urusan (id, judul, pemilik, jatuh_tempo, tanggal_patokan, ulang, interval, mulai_urus, catatan,
+      `INSERT INTO urusan (id, ruang, judul, pemilik, jatuh_tempo, tanggal_patokan, ulang, interval, mulai_urus, catatan,
          dibuat_oleh, diubah_oleh, dibuat_pada, diubah_pada)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(id, data.judul, data.pemilik, data.jatuh_tempo, data.tanggal_patokan, data.ulang, data.interval,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(id, ruang, data.judul, data.pemilik, data.jatuh_tempo, data.tanggal_patokan, data.ulang, data.interval,
       data.mulai_urus, data.catatan, orang, orang, kini, kini).run();
     return json({ id }, 201);
   }
@@ -110,7 +120,7 @@ async function api(request, env, url, orang) {
   const cocok = /^\/api\/urusan\/([0-9a-f-]{36})(\/selesai|\/riwayat)?$/.exec(pathname);
   if (cocok) {
     const [, id, sub] = cocok;
-    const urusan = await env.DB.prepare('SELECT * FROM urusan WHERE id = ? AND diarsip = 0').bind(id).first();
+    const urusan = await env.DB.prepare('SELECT * FROM urusan WHERE id = ? AND ruang = ? AND diarsip = 0').bind(id, ruang).first();
     if (!urusan) return galat('Urusan tidak ditemukan. Mungkin sudah dihapus dari HP lain.', 404);
 
     if (!sub && metode === 'PUT') {
@@ -166,16 +176,48 @@ async function api(request, env, url, orang) {
   }
 
   if (pathname === '/api/kalender' && metode === 'GET') {
-    return json({ link: await linkKalender(env, url) });
+    return json({ link: await linkKalender(env, ruang, url) });
   }
 
   const reset = /^\/api\/kalender\/([DI])\/ganti$/.exec(pathname);
   if (reset && metode === 'POST') {
-    await env.DB.prepare('DELETE FROM kalender WHERE orang = ?').bind(reset[1]).run();
-    return json({ link: await linkKalender(env, url) });
+    await env.DB.prepare('DELETE FROM kalender WHERE ruang = ? AND orang = ?').bind(ruang, reset[1]).run();
+    return json({ link: await linkKalender(env, ruang, url) });
+  }
+
+  if (pathname === '/api/demo/ulang' && metode === 'POST') {
+    if (ruang !== RUANG_DEMO) return galat('Hanya tersedia di mode demo.', 403);
+    await isiUlangDemo(env);
+    return json({ ok: true });
   }
 
   return galat('Alamat tidak dikenal.', 404);
+}
+
+async function masuk(request, env) {
+  if (!env.SESSION_SECRET) return galat('Server belum diatur (SESSION_SECRET kosong).', 500);
+  const body = await bacaJson(request);
+  let orang = null;
+  let ruang = 'keluarga';
+
+  if (demoAktif(env) && (body?.demo === 'D' || body?.demo === 'I')) {
+    orang = body.demo;
+    ruang = RUANG_DEMO;
+    await pastikanDemoTerisi(env);
+  } else if (env.DEV_LOGIN === '1' && (body?.dev === 'D' || body?.dev === 'I')) {
+    orang = body.dev;
+  } else {
+    if (!env.GOOGLE_CLIENT_ID) return galat('Server belum diatur (GOOGLE_CLIENT_ID kosong).', 500);
+    let email;
+    try {
+      email = await verifikasiTokenGoogle(body?.credential, env.GOOGLE_CLIENT_ID);
+    } catch (e) {
+      return galat(`Login Google gagal: ${e.message}`, 401);
+    }
+    orang = daftarEmail(env)[email];
+    if (!orang) return galat(`${email} tidak terdaftar. Aplikasi ini hanya untuk Diego dan Irna. Untuk mencoba, pakai tombol demo.`, 403);
+  }
+  return json({ orang, ruang }, 200, { 'set-cookie': await buatCookieSesi(orang, ruang, env) });
 }
 
 export default {
@@ -184,29 +226,10 @@ export default {
     const { pathname } = url;
 
     if (pathname === '/api/config') {
-      return json({ google_client_id: env.GOOGLE_CLIENT_ID || '', dev_login: env.DEV_LOGIN === '1' });
+      return json({ google_client_id: env.GOOGLE_CLIENT_ID || '', dev_login: env.DEV_LOGIN === '1', demo: demoAktif(env) });
     }
 
-    if (pathname === '/api/masuk' && request.method === 'POST') {
-      if (!env.SESSION_SECRET) return galat('Server belum diatur (SESSION_SECRET kosong).', 500);
-      const body = await bacaJson(request);
-      const izin = daftarEmail(env);
-      let orang = null;
-      if (env.DEV_LOGIN === '1' && (body?.dev === 'D' || body?.dev === 'I')) {
-        orang = body.dev;
-      } else {
-        if (!env.GOOGLE_CLIENT_ID) return galat('Server belum diatur (GOOGLE_CLIENT_ID kosong).', 500);
-        let email;
-        try {
-          email = await verifikasiTokenGoogle(body?.credential, env.GOOGLE_CLIENT_ID);
-        } catch (e) {
-          return galat(`Login Google gagal: ${e.message}`, 401);
-        }
-        orang = izin[email];
-        if (!orang) return galat(`${email} tidak terdaftar. Aplikasi ini hanya untuk Diego dan Irna.`, 403);
-      }
-      return json({ orang }, 200, { 'set-cookie': await buatCookieSesi(orang, env) });
-    }
+    if (pathname === '/api/masuk' && request.method === 'POST') return masuk(request, env);
 
     if (pathname === '/api/keluar' && request.method === 'POST') {
       return json({ ok: true }, 200, { 'set-cookie': hapusCookieSesi() });
@@ -214,19 +237,19 @@ export default {
 
     const kal = /^\/kal\/([A-Za-z0-9_-]{20,})\.ics$/.exec(pathname);
     if (kal) {
-      const baris = await env.DB.prepare('SELECT orang FROM kalender WHERE token = ?').bind(kal[1]).first();
+      const baris = await env.DB.prepare('SELECT ruang, orang FROM kalender WHERE token = ?').bind(kal[1]).first();
       if (!baris) return new Response('Link kalender tidak berlaku lagi.', { status: 404 });
-      const isi = buatKalender(baris.orang, await daftarUrusan(env), `https://${url.host}/`, sekarang());
+      const isi = buatKalender(baris.orang, await daftarUrusan(env, baris.ruang), `https://${url.host}/`, sekarang(), baris.ruang);
       return new Response(isi, {
         headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'no-cache' },
       });
     }
 
     if (pathname.startsWith('/api/')) {
-      const orang = await bacaSesi(request, env);
-      if (!orang) return galat('Silakan masuk dulu.', 401);
-      if (pathname === '/api/saya') return json({ orang });
-      return api(request, env, url, orang);
+      const sesi = await bacaSesi(request, env);
+      if (!sesi) return galat('Silakan masuk dulu.', 401);
+      if (pathname === '/api/saya') return json(sesi);
+      return api(request, env, url, sesi);
     }
 
     return env.ASSETS.fetch(request);

@@ -2,9 +2,12 @@ import { T } from './teks.js';
 import { ORANG, CONTOH, hariIniWIB, jatuhTempoBerikutnya, statusUrusan, tahapPengingat, tambahHari, teksUlang } from './jadwal.js';
 
 const SINKRON_MS = 15000;
+const ANDROID = /Android/i.test(navigator.userAgent);
+const ICSX_PLAY_STORE = 'https://play.google.com/store/apps/details?id=at.bitfire.icsdroid';
 
 const keadaan = {
   orang: null,
+  ruang: 'keluarga',
   urusan: [],
   hariIni: hariIniWIB(),
   filter: 'semua',
@@ -74,7 +77,7 @@ async function panggil(jalur, opsi = {}) {
 // ---------- Masuk ----------
 
 async function tampilMasuk(pesanGalat = '') {
-  let config = { google_client_id: '', dev_login: false };
+  let config = { google_client_id: '', dev_login: false, demo: false };
   try { config = await (await fetch('/api/config')).json(); } catch { /* tampilkan layar tanpa tombol */ }
 
   app.innerHTML = `
@@ -88,10 +91,18 @@ async function tampilMasuk(pesanGalat = '') {
         ${config.dev_login ? `
           <button class="tombol kedua penuh" data-dev="D">${esc(T.masukUji('Diego'))}</button>
           <button class="tombol kedua penuh" data-dev="I">${esc(T.masukUji('Irna'))}</button>` : ''}
+        ${config.demo ? `
+          <section class="masuk-demo" aria-labelledby="judul-demo">
+            <h2 id="judul-demo">${esc(T.demoJudul)}</h2>
+            <p>${esc(T.demoIsi)}</p>
+            <button class="tombol kedua penuh" data-demo="D">${inisial('D')} ${esc(T.masukDemo('Diego'))}</button>
+            <button class="tombol kedua penuh" data-demo="I">${inisial('I')} ${esc(T.masukDemo('Irna'))}</button>
+          </section>` : ''}
       </div>
     </main>`;
 
   app.querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => masuk({ dev: b.dataset.dev })));
+  app.querySelectorAll('[data-demo]').forEach((b) => b.addEventListener('click', () => masuk({ demo: b.dataset.demo })));
 
   if (config.google_client_id) {
     const pasang = () => {
@@ -110,8 +121,10 @@ async function tampilMasuk(pesanGalat = '') {
 
 async function masuk(body) {
   try {
-    const { orang } = await panggil('/api/masuk', { method: 'POST', body });
+    const { orang, ruang } = await panggil('/api/masuk', { method: 'POST', body });
     keadaan.orang = orang;
+    keadaan.ruang = ruang;
+    keadaan.filter = 'semua';
     await muat();
   } catch (e) {
     tampilMasuk(e.message);
@@ -121,6 +134,8 @@ async function masuk(body) {
 async function keluar() {
   await fetch('/api/keluar', { method: 'POST' });
   keadaan.orang = null;
+  keadaan.ruang = 'keluarga';
+  keadaan.urusan = [];
   window.google?.accounts?.id?.disableAutoSelect();
   tutupLembar();
   tampilMasuk();
@@ -219,6 +234,7 @@ function tampilDashboard() {
         <button class="tombol-ikon" data-kalender>📅 ${esc(T.kalender)}</button>
         <button class="tombol-ikon" data-akun aria-label="${esc(T.keluar)}">${inisial(keadaan.orang)}</button>
       </header>
+      ${keadaan.ruang === 'demo' ? `<div class="pita-demo"><p>${esc(T.bannerDemo)}</p><button class="tombol-kecil" data-ulang-demo>${esc(T.tombolUlangDemo)}</button></div>` : ''}
       ${keadaan.offline ? `<p class="offline">${esc(T.gagalMuat)}</p>` : ''}
       ${semua.length ? `<div class="ringkasan">${ringkas}</div>` : ''}
       ${semua.length ? `<nav class="penyaring" aria-label="Penyaring">${['semua', 'D', 'I', 'B'].map(chip).join('')}</nav>` : ''}
@@ -236,7 +252,17 @@ app.addEventListener('click', (e) => {
   else if (t.dataset.detail) lembarDetail(cari(t.dataset.detail));
   else if (t.hasAttribute('data-kalender')) lembarKalender();
   else if (t.hasAttribute('data-akun')) lembarAkun();
+  else if (t.hasAttribute('data-ulang-demo')) ulangDemo();
 });
+
+async function ulangDemo() {
+  try {
+    await panggil('/api/demo/ulang', { method: 'POST', body: {} });
+    tutupLembar();
+    toast(T.toastUlangDemo);
+    await muat();
+  } catch (e) { toast(e.message); }
+}
 
 function cari(id) {
   return keadaan.urusan.find((u) => u.id === id);
@@ -267,9 +293,14 @@ lembar.addEventListener('click', (e) => {
 });
 
 function lembarAkun() {
-  bukaLembar(ORANG[keadaan.orang].nama, `
+  const demo = keadaan.ruang === 'demo';
+  bukaLembar(`${ORANG[keadaan.orang].nama}${demo ? ' (demo)' : ''}`, `
+    ${demo ? `<p class="bantu">${esc(T.bannerDemo)}</p><button class="tombol kedua penuh" data-ulang>${esc(T.tombolUlangDemo)}</button>` : ''}
     <button class="tombol kedua penuh" data-keluar>${esc(T.keluar)}</button>`,
-  (el) => el.querySelector('[data-keluar]').addEventListener('click', keluar));
+  (el) => {
+    el.querySelector('[data-keluar]').addEventListener('click', keluar);
+    el.querySelector('[data-ulang]')?.addEventListener('click', ulangDemo);
+  });
 }
 
 function lembarContoh() {
@@ -514,21 +545,29 @@ async function lembarKalender() {
       <div class="kal-kotak">
         <h3>${inisial(o)} ${esc(T.kalenderMilik(ORANG[o].nama))}</h3>
         <div class="kal-link">${esc(https)}</div>
-        <div class="aksi">
-          <a class="tombol" href="${esc(link[o])}">${esc(T.tombolBukaKalender)}</a>
-          <button class="tombol-kecil" data-salin="${esc(https)}">${esc(T.tombolSalin)}</button>
-        </div>
+        ${ANDROID ? `
+          <p class="bantu">${esc(T.bantuAndroid)}</p>
+          <div class="aksi">
+            <a class="tombol kedua" href="${ICSX_PLAY_STORE}" target="_blank" rel="noopener">${esc(T.tombolPlayStore)}</a>
+            <button class="tombol" data-salin="${esc(https)}">${esc(T.tombolSalin)}</button>
+          </div>
+          <a class="tombol-kecil" href="${esc(link[o])}">${esc(T.tombolBukaIcsx)}</a>` : `
+          <div class="aksi">
+            <a class="tombol" href="${esc(link[o])}">${esc(T.tombolBukaKalender)}</a>
+            <button class="tombol-kecil" data-salin="${esc(https)}">${esc(T.tombolSalin)}</button>
+          </div>`}
         <button class="tombol-kecil" data-ganti="${o}">${esc(T.tombolGantiLink)}</button>
         <p class="bantu">${esc(T.bantuGantiLink)}</p>
       </div>`;
   };
   const langkah = (isi) => `<ol class="langkah">${isi.map((s) => `<li>${s.startsWith('Penting') ? `<strong>${esc(s)}</strong>` : esc(s)}</li>`).join('')}</ol>`;
+  const langkahIphone = `<div class="kolom"><span class="label">${esc(T.langkahIphone)}</span>${langkah(T.langkahIphoneIsi)}</div>`;
+  const langkahAndroid = `<div class="kolom"><span class="label">${esc(T.langkahAndroid)}</span>${langkah(T.langkahAndroidIsi)}</div>`;
 
   bukaLembar(T.judulKalender, `
     <p class="bantu">${esc(T.introKalender)}</p>
     ${kotak(urutan[0])}
-    <div class="kolom"><span class="label">${esc(T.langkahIphone)}</span>${langkah(T.langkahIphoneIsi)}</div>
-    <div class="kolom"><span class="label">${esc(T.langkahAndroid)}</span>${langkah(T.langkahAndroidIsi)}</div>
+    ${ANDROID ? langkahAndroid + langkahIphone : langkahIphone + langkahAndroid}
     <p class="bantu">${esc(T.catatanGoogle)}</p>
     ${kotak(urutan[1])}`,
   (el) => {
@@ -559,7 +598,9 @@ async function mulai() {
   try {
     const res = await fetch('/api/saya', { credentials: 'same-origin' });
     if (res.ok) {
-      keadaan.orang = (await res.json()).orang;
+      const sesi = await res.json();
+      keadaan.orang = sesi.orang;
+      keadaan.ruang = sesi.ruang;
       await muat();
     } else {
       await tampilMasuk();

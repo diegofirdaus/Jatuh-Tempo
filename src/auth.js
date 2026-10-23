@@ -60,8 +60,8 @@ async function kunciHmac(secret) {
   return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
-export async function buatCookieSesi(orang, env) {
-  const isi = b64url(enc.encode(JSON.stringify({ o: orang, exp: Math.floor(Date.now() / 1000) + UMUR_SESI_DETIK })));
+export async function buatCookieSesi(orang, ruang, env) {
+  const isi = b64url(enc.encode(JSON.stringify({ o: orang, r: ruang, exp: Math.floor(Date.now() / 1000) + UMUR_SESI_DETIK })));
   const ttd = b64url(await crypto.subtle.sign('HMAC', await kunciHmac(env.SESSION_SECRET), enc.encode(isi)));
   return `${COOKIE}=${isi}.${ttd}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${UMUR_SESI_DETIK}`;
 }
@@ -70,7 +70,7 @@ export function hapusCookieSesi() {
   return `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 
-// Mengembalikan 'D' / 'I' bila sesi sah, selain itu null.
+// Mengembalikan { orang: 'D' | 'I', ruang: 'keluarga' | 'demo' } bila sesi sah, selain itu null.
 export async function bacaSesi(request, env) {
   if (!env.SESSION_SECRET) return null;
   const cookie = request.headers.get('cookie') || '';
@@ -83,7 +83,8 @@ export async function bacaSesi(request, env) {
     if (!sah) return null;
     const data = JSON.parse(new TextDecoder().decode(dariB64url(isi)));
     if (data.exp * 1000 < Date.now()) return null;
-    return data.o === 'D' || data.o === 'I' ? data.o : null;
+    if (data.o !== 'D' && data.o !== 'I') return null;
+    return { orang: data.o, ruang: data.r === 'demo' ? 'demo' : 'keluarga' };
   } catch {
     return null;
   }

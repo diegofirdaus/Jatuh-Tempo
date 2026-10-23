@@ -40,8 +40,8 @@ function judulTahap(tahap, judul) {
   return `${tahap.hari} hari lagi: ${judul}`;
 }
 
-export function buatKalender(orang, daftarUrusan, urlAplikasi, sekarangIso) {
-  const nama = ORANG[orang].nama;
+export function buatKalender(orang, daftarUrusan, urlAplikasi, sekarangIso, ruang = 'keluarga') {
+  const nama = ruang === 'demo' ? `${ORANG[orang].nama} (demo)` : ORANG[orang].nama;
   const baris = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',

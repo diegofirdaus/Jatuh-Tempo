@@ -257,6 +257,32 @@ button { cursor: pointer; }
 .masuk h1 { margin: 0; font-size: 1.8rem; font-weight: 800; }
 .masuk p { margin: 0; color: var(--muted); }
 .masuk .galat { color: var(--telat); font-weight: 600; }
+.masuk-demo {
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+.masuk-demo h2 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.masuk-demo p { font-size: 0.9rem; }
+.masuk-demo .tombol { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+.pita-demo {
+  background: var(--urus-bg);
+  color: var(--urus);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.pita-demo p { margin: 0; flex: 1 1 220px; }
 
 /* Lembar bawah (dialog) */
 dialog#lembar {
