@@ -82,21 +82,28 @@ async function tampilMasuk(pesanGalat = '') {
 
   app.innerHTML = `
     <main class="masuk">
-      <div class="masuk-kotak">
-        <img src="/ikon/ikon.svg" alt="">
-        <h1>${esc(T.namaAplikasi)}</h1>
-        <p>${esc(T.subjudulMasuk)}</p>
+      <span class="bola bola-1" aria-hidden="true"></span>
+      <span class="bola bola-2" aria-hidden="true"></span>
+      <figure class="polaroid">
+        <img src="/ikon/padel.webp" width="720" height="720" alt="Ilustrasi Diego dan Irna di lapangan padel">
+        <figcaption>${esc(T.polaroid)}</figcaption>
+      </figure>
+      <div class="masuk-isi">
+        <h1>Jatuh <em>Tempo</em></h1>
+        <p class="masuk-sub">${esc(T.subjudulMasuk)}</p>
         ${pesanGalat ? `<p class="galat" role="alert">${esc(pesanGalat)}</p>` : ''}
-        ${config.google_client_id ? `<p>${esc(T.masukGoogle)}</p><div id="tombol-google"></div>` : `<p class="bantu">${esc(T.belumDiatur)}</p>`}
+        ${config.google_client_id ? '<div id="tombol-google" class="tombol-google"></div>' : `<p class="bantu">${esc(T.belumDiatur)}</p>`}
         ${config.dev_login ? `
           <button class="tombol kedua penuh" data-dev="D">${esc(T.masukUji('Diego'))}</button>
           <button class="tombol kedua penuh" data-dev="I">${esc(T.masukUji('Irna'))}</button>` : ''}
         ${config.demo ? `
           <section class="masuk-demo" aria-labelledby="judul-demo">
             <h2 id="judul-demo">${esc(T.demoJudul)}</h2>
+            <div class="demo-pilih">
+              <button class="demo-tombol o-D" data-demo="D"><span class="inisial" aria-hidden="true">D</span>${esc(T.masukDemo('Diego'))}</button>
+              <button class="demo-tombol o-I" data-demo="I"><span class="inisial" aria-hidden="true">I</span>${esc(T.masukDemo('Irna'))}</button>
+            </div>
             <p>${esc(T.demoIsi)}</p>
-            <button class="tombol kedua penuh" data-demo="D">${inisial('D')} ${esc(T.masukDemo('Diego'))}</button>
-            <button class="tombol kedua penuh" data-demo="I">${inisial('I')} ${esc(T.masukDemo('Irna'))}</button>
           </section>` : ''}
       </div>
     </main>`;
@@ -113,7 +120,12 @@ async function tampilMasuk(pesanGalat = '') {
         ux_mode: 'popup',
       });
       const wadah = document.getElementById('tombol-google');
-      if (wadah) window.google.accounts.id.renderButton(wadah, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'id' });
+      if (wadah) {
+        window.google.accounts.id.renderButton(wadah, {
+          theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'id',
+          width: Math.min(400, Math.round(wadah.getBoundingClientRect().width)),
+        });
+      }
     };
     pasang();
   }
