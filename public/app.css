@@ -250,24 +250,96 @@ button { cursor: pointer; }
 }
 .fab span { font-size: 1.3rem; line-height: 1; }
 
-/* Masuk */
-.masuk { min-height: 100vh; display: grid; place-items: center; text-align: center; padding: 24px; }
-.masuk-kotak { max-width: 360px; display: grid; gap: 16px; justify-items: center; }
-.masuk img { width: 72px; height: 72px; border-radius: 18px; }
-.masuk h1 { margin: 0; font-size: 1.8rem; font-weight: 800; }
-.masuk p { margin: 0; color: var(--muted); }
-.masuk .galat { color: var(--telat); font-weight: 600; }
+/* Masuk: latar krem hangat, ilustrasi sebagai polaroid miring, aksen hijau bola padel.
+   Sengaja satu tampilan (tidak ikut mode gelap), jadi semua warnanya ditulis sendiri. */
+.masuk {
+  --krem: #fff8ec;
+  --tinta: #14192a;
+  --abu: #4d5568;
+  --lime: #d6f24b;
+  --garis: #d9d3c6;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--krem);
+  color: var(--tinta);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+  padding-top: calc(28px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+.bola { position: absolute; border-radius: 50%; background: var(--lime); opacity: 0.55; pointer-events: none; }
+.bola-1 { width: 110px; height: 110px; top: 40px; right: -30px; }
+.bola-2 { width: 80px; height: 80px; bottom: 60px; left: -24px; opacity: 0.45; }
+
+.polaroid {
+  position: relative;
+  margin: 0;
+  width: min(300px, 76vw);
+  background: #fff;
+  padding: 12px 12px 0;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgb(20 25 42 / 0.18);
+  transform: rotate(-3deg);
+}
+.polaroid img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: #dfe7f5; }
+.polaroid figcaption {
+  font-family: "Caveat", "Segoe Print", cursive;
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: #3a4256;
+  text-align: center;
+  padding: 6px 0 10px;
+}
+
+.masuk-isi { position: relative; width: 100%; max-width: 360px; display: grid; gap: 14px; }
+.masuk-isi h1 { margin: 0; font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.masuk-isi h1 em { font-style: normal; background: linear-gradient(transparent 62%, var(--lime) 62% 92%, transparent 92%); }
+.masuk-sub { margin: 0; color: var(--abu); font-size: 1rem; }
+.masuk .galat { margin: 0; color: #c8312f; font-weight: 600; }
+.masuk .bantu { color: var(--abu); }
+.tombol-google { min-height: 44px; display: flex; justify-content: center; }
+
 .masuk-demo {
-  margin-top: 12px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-  width: 100%;
+  margin-top: 4px;
+  background: #fff;
+  border: 1.5px dashed var(--garis);
+  border-radius: 20px;
+  padding: 14px;
   display: grid;
   gap: 10px;
 }
-.masuk-demo h2 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.masuk-demo p { font-size: 0.9rem; }
-.masuk-demo .tombol { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.masuk-demo h2 { margin: 0; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7386; }
+.masuk-demo p { margin: 0; font-size: 0.82rem; color: #6b7386; }
+.demo-pilih { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.demo-tombol {
+  border: 0;
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: var(--warna);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.demo-tombol .inisial { width: 28px; height: 28px; font-size: 0.8rem; background: rgb(255 255 255 / 0.25); color: #fff; }
+.masuk .o-D { --warna: #2f6ae0; }
+.masuk .o-I { --warna: #d2417f; }
+.masuk .tombol.kedua { background: #efe8da; color: var(--tinta); }
+
+@media (min-height: 760px) {
+  .masuk { justify-content: center; }
+}
 
 .pita-demo {
   background: var(--urus-bg);
