@@ -1,0 +1,15 @@
+{
+  "name": "jatuh-tempo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply jatuh-tempo --local",
+    "db:migrate:remote": "wrangler d1 migrations apply jatuh-tempo --remote",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.152.0"
+  }
+}
