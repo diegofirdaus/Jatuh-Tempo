@@ -14,7 +14,7 @@ migrations_dir = "migrations"
 
 [vars]
 # OAuth Client ID (tipe "Web application") dari Google Cloud Console. Bukan rahasia.
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "439490860277-q4jihbhs5mojrfgkr1rk80m2it6rl9lv.apps.googleusercontent.com"
 
 # Rahasia diatur lewat `wrangler secret put` (lokal: file .dev.vars):
 #   SESSION_SECRET  string acak panjang untuk menandatangani cookie login
